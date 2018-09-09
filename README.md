@@ -1,1 +1,1 @@
-# UCL-MSc-Code-Repository
+# Hurst-UCL-MSc-Code-Repository
