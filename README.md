@@ -31,3 +31,5 @@ Again, to determine what code was run to produce which results, look at the deep
 The "13" directory is simply the "clean" version of the code used in the appendix of the report.
 
 Note that many of the codes included here will take several hours if run on a laptop machine. For the project, they were run on Amazon Web Services in order to distribute the load over many cores, hence the naming "ServerCode."
+
+For any questions, please email matthew.ryan.hurst@gmail.com.
