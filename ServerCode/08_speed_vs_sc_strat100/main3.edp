@@ -1,0 +1,531 @@
+// Navier Stokes
+// Author: Matthew Hurst
+// Based on Codes from Erik Burman
+
+ifstream filein("timeanddate");
+string datestr;
+filein >> datestr;
+string dir = "Results/"+datestr+"/";
+ofstream setup(dir+"problem_parameters.sol");
+
+// ########## Define some useful functions ##########
+
+macro dn(u) (N.x*dx(u)+N.y*dy(u)) // normal derivative
+macro div(u,v) (dx(u)+dy(v)) // divergence
+macro eps1n(u,v) (dx(u)*N.x+0.5e0*(dy(u)+dx(v))*N.y) //
+macro eps2n(u,v) (dy(v)*N.y+0.5e0*(dy(u)+dx(v))*N.x) //
+
+// ########## Define and initialize variables ##########
+
+// Stabilisation parameters
+real gammap, gammau, gammabc, gdiv;
+gammap=0.1e-1;
+gammau=0.1e-1;
+gammabc=10.0e0;
+gdiv = 0.;
+
+// relaxation parameters
+real relax, urelax;
+relax = 0.1;
+setup << "relax: " << relax << endl;
+urelax = 0.1;
+setup << "urelax: " << urelax << endl;
+
+real dt = 10.0; // NOTE that this is non-dimensional time
+setup << "dt: " << dt << endl;
+
+// Convergence tolerance and increment variables
+real fixedpointtol = 0.01;
+setup << "fixedpointtol: " << fixedpointtol << endl;
+real timetol = 1.0e-5;
+real forcetol = 1.0e-5;
+real newtontol = 1e-3;
+real veltol = 1e-3;
+real incrhocurrent, incvelcurrent, inctimecurrent, incforce, veldiffcurrent;
+
+// Counter
+int i;
+int fixedpointiter=0;
+int fixedpointitermax=250;
+int timeiter=0;
+int newtoniter=2;
+
+real Ldim=0.01; // dimensional wedge length (m)
+setup << "Ldim: " << Ldim << endl;
+real L=1.0; // non-dimensional wedge length
+setup << "L: " << L << endl;
+real alpha=0.1; // non-dimensional wedge slope
+setup << "alpha: " << alpha << endl;
+real alpharad = atan(alpha);
+setup << "alpharad: " << alpharad << endl;
+real area = Ldim^2*alpha;
+cout << "area: " << area << endl;
+
+// Problem parameters that don't change
+real g=9.81; // gravitational acceleration (m s^-2)
+setup << "g: " << g << endl;
+real nu = 1.e-6; // kinematic viscosity (m^2 s^-1)
+setup << "nu: " << nu << endl;
+real rho00=1115.0; // dimensional reference density (kg m^-3)
+setup << "rho00: " << rho00 << endl;
+real mu = nu*rho00; // dynamic viscosity (kg m^-1 s^-1)
+setup << "mu: " << mu << endl;
+
+
+// #################### CHANGE SCHMIDT NUMBER ####################
+real kappa0=1.e-7; // dimensional diffusivity constant (m^2 s^-1)
+setup << "kappa0: " << kappa0 << endl;
+// ###############################################################
+
+real Sc=nu/kappa0; // Schmidt Number
+setup << "Sc: " << Sc << endl;
+
+// ################### CHANGE DENSITY GRADIENT ###################
+real drhodz=-1.0e2; // density gradient (kg m^-4)
+setup << "drhodz: " << drhodz << endl;
+// ###############################################################
+
+real Nvar=(-g*drhodz/rho00)^(0.5); // buoyancy frequency (s^-1)
+setup << "Nvar: " << Nvar << endl;
+real gamma=(Nvar^2*(sin(alpharad))^2/(4.0*nu*kappa0))^(0.25);
+setup << "gamma: " << gamma << endl;
+real u0=2.0*kappa0*gamma/tan(alpharad);// reference velocity (m s^-1)
+setup << "u0: " << u0 << endl;
+real beta0=-Ldim*drhodz/rho00; // non-dimensional stratification parameter
+setup << "beta0: " << beta0 << endl;
+real beta=beta0*rho00*g*Ldim^2/(u0*mu); // scaled stratification parameter
+setup << "beta: " << beta << endl;
+real Re=u0*Ldim/nu; // Reynolds Number
+setup << "Re: " << Re << endl;
+real kappa=1./(Re*Sc); // Non-dimensional diffusivity
+setup << "kappa: " << kappa << endl;
+real St=Nvar*Ldim/u0; // Strouhal number
+setup << "St: " << St << endl;
+
+real force1, force2, force3;
+real forceold;
+real Ubackground1, Ubackground2, Ubackground3;
+real U;
+
+// Domain setup
+real xlen=5.0, ylen=2.5; // size of domain
+setup << "xlen: " << xlen << endl;
+setup << "ylen: " << ylen << endl;
+real S=99; // label for the wedge border
+
+// Plotting option
+bool toPlot=true;
+
+// ########## Design (and plot) the geometry of the domain ##########
+
+// Outside border
+border C1(t=0,1) {  x=-xlen*(1-t)+xlen*t-L/2; y=-ylen; 							label= 1;}
+border C2(t=0,1) {  x=xlen-L/2;  							y=-ylen*(1-t)+ylen*t; label= 1;}
+border C3(t=0,1) {  x=xlen*(1-t)-xlen*t-L/2;  y=ylen; 							label= 1;}
+border C4(t=0,1) {  x=-xlen-L/2;  						y=ylen*(1-t)-ylen*t;  label= 1;}
+
+// Wedge border
+border Splus(t=L,0){   x = -t; y =  alpha*t ; label=S;}
+border Sminus(t=0,L){  x = -t; y = -alpha*t ; label=S;}
+border Left(t=0,1){ x = -L; y = -alpha*L + t*2*alpha*L ; label = S; }
+
+int outrefinement = 8;
+int wedgerefinement = 8;
+int topandbottom = 2*outrefinement;
+setup << "topandbottom: " << topandbottom << endl;
+int leftandright = 1*outrefinement;
+setup << "leftandright: " << leftandright << endl;
+int wedgeslope = 8*wedgerefinement;
+setup << "wedgeslope: " << wedgeslope << endl;
+int wedgeback = 2*wedgerefinement;
+setup << "wedgeback: " << wedgeback << endl;
+setup.flush;
+
+// Create and save mesh (and plot optionally)
+mesh th= buildmesh(C1(topandbottom)+C2(leftandright)+C3(topandbottom)+C4(leftandright)+Splus(wedgeslope)+Left(wedgeback)+Sminus(wedgeslope));
+savemesh(th,dir+"Th.msh");
+if (toPlot) plot(th,bb=[[-xlen-L/2,-ylen],[xlen-L/2,ylen]],ps=dir+"mesh.eps");
+if (toPlot) plot(th,bb=[1.2*[-L,-alpha*L],[0.2*L,1.2*alpha*L]],ps=dir+"meshzoom.eps");
+
+// ########## Define the approximation space and finite element functions ##########
+fespace Vh(th,P2); // p2 space (used for all solution variables)
+Vh u1,u2,p; // velocity and pressure (solution variables)
+Vh v1,v2,q; // test functions in NS
+Vh rho; // density (solution variable)
+Vh v; // test function in convection-diffusion
+Vh u1iter,u2iter,rhoiter; // place-holders for fixed point iteration
+Vh u1old,u2old,rhoold; // place-holders for time-stepping
+
+
+fespace Xh(th,P1); // p1 polynomial space (only used for plotting)
+Xh p1,u11,u21,rho1;
+Xh visc1,visc2;
+
+// ########## Define some useful functionals ##########
+
+func pressureforce = int1d(th,S)(p*N.x);
+func viscousforce = int1d(th,S)(-eps1n(u1,u2));
+func incrho = sqrt(int2d(th)((rhoiter-rho)^2)/int2d(th)(rho^2));
+func incvel = sqrt(int2d(th)((u1-u1iter)^2+(u2-u2iter)^2)/int2d(th)(u1^2+u2^2));
+func inctime = sqrt(int2d(th)((rhoold-rho)^2)/int2d(th)(rho^2))+ sqrt(int2d(th)((u1-u1old)^2+(u2-u2old)^2)/int2d(th)(u1^2+u2^2));
+
+// ########## Variational form of the convection-diffusion equation ##########
+problem convdiff(rho,v,solver=UMFPACK) =
+	 int2d(th)(St*rho/dt*v + kappa*(dx(rho)*dx(v) + dy(rho)*dy(v)) ) // kappafusion
+	+ int2d(th)( u1iter*dx(rho)*v + u2iter*dy(rho)*v ) // advection (why not IBP here???)
+//  stabilization necessary if kappa << |b| h$
+//	+ intalledges(th)( ((gammau*abs(b1*N.x + b2*N.y))*lenEdge^(2))*(jump(dn(rho))*jump(dn(v)))*(nTonEdge-1) ) // IP method
+-int2d(th)(St*rhoold/dt*v)
+	 + on(1,rho=-y)
+;
+
+// ########## Variational form of the navier-stokes equation ##########
+
+problem NS([u1,u2,p],[v1,v2,q],solver=UMFPACK) =
+		int2d(th)(Re*St*(u1/dt*v1+u2/dt*v2)
+						+ (dx(u1)*dx(v1) + dy(u1)*dy(v1) + dx(u2)*dx(v2) + dy(u2)*dy(v2)) // comes from IBP of Laplacian operator
+			+ Re*(1-y*beta0)*(u1iter*dx(u1) + u2iter*dy(u1))*v1 // comes directly from conservation of x momentum
+			+ Re*(1-y*beta0)*(u1iter*dx(u2) + u2iter*dy(u2))*v2 // comes directly from conservation of y momentum
+						 +0.0000000001*p*q      // this small penalty term improves solvability (why?????)
+			+gdiv*div(u1iter,u2iter)*(u1*v1+u2*v2) // this term is turned off right now - what would it be otherwise???
+						- p*div(v1,v2) // comes from IBP of pressure term in conservation of momentum
+						+ q*(div(u1,u2)) // comes directly from the incompressibility equation
+					 )
+		 + int2d(th)(rho*beta*v2) // comes from buoyancy term
+		 -int2d(th)(Re*St*(u1old/dt*v1+u2old/dt*v2))
+// Interior penalty stabilization of the streamline derivative + 5% crosswind diffusion
+//  + intalledges(th)(
+//    (gammau*(abs(b1*N.x + b2*N.y)+
+//             0.05*(b1^2 + b2^2)^0.5))*lenEdge^(2)*
+//        (jump(dn(u1))*jump(dn(v1))+jump(dn(u2))*jump(dn(v2))*(nTonEdge-1)))
+	+ intalledges(th)( (gammap*min(lenEdge^(3)/nu,lenEdge^(2)/(1.e-16+(u1iter^2+u2iter^2)^0.5)))
+		 *(jump(dn(p))*jump(dn(q)))*(nTonEdge-1))   // this penalty on gradient fluctuations ensures pressure stability
+// Strongly imposed boundary conditions
+							+ on(S,u1=0,u2=0)
+							+ on(1,u1=-U,u2=0)
+;
+
+// #################### MAIN PROGRAM ####################
+
+ofstream resultsout(dir+"results.sol");
+ofstream forceout(dir+"force.sol");
+
+resultsout << "Program Started: " << endl;
+
+real cpu = clock();
+
+
+// ####################### BEGIN FIRST SOLUTION LOOP #######################
+
+resultsout << "########### Iteration: 1 ###########" << endl;
+
+Ubackground1=0.; // background velocity (m s^-1) starting guess
+resultsout << "Ubackground: " << Ubackground1 << endl;
+
+U=Ubackground1/u0; // non-dimensional background velocity
+resultsout << "U: " << U << endl;
+
+// Set initial conditions
+u1=-U;
+u2=0.;
+u1iter=u1;
+u2iter=u2;
+u1old=u1;
+u2old=u2;
+p=0;
+rho=-y;
+rhoiter=rho;
+rhoold=rho;
+
+// Start time iteration
+timeiter=0;
+inctimecurrent = 2*timetol*dt;
+incforce = 2*forcetol*dt;
+forceold = 0;
+
+while ((inctimecurrent/dt > timetol) || (incforce/dt > forcetol)){
+
+  timeiter++;
+	resultsout << "time iteration: " << timeiter << endl;
+
+	// Start fixed point iteration
+	fixedpointiter = 0;
+	incrhocurrent=2*fixedpointtol;
+	incvelcurrent=2*fixedpointtol;
+
+	while ((incrhocurrent+incvelcurrent>fixedpointtol) && (fixedpointiter<fixedpointitermax)) {
+
+		fixedpointiter++;
+		resultsout << "fixed point iteration: " << fixedpointiter << endl;
+
+		NS;
+		incvelcurrent=incvel;
+		u1=u1*urelax+(1.-urelax)*u1iter;
+		u2=u2*urelax+(1.-urelax)*u2iter;
+		u1iter=u1;
+		u2iter=u2;
+		convdiff;
+		incrhocurrent=incrho;
+		rho = relax*rho+(1.-relax)*rhoiter;
+		rhoiter=rho;
+
+		// Check the convergence progress
+		resultsout << "fixed point increment: " << incrhocurrent+incvelcurrent << endl;
+		resultsout.flush;
+		//if (toPlot) plot(rho);
+		//plot([u1,u2],bb=[[-xlen-L/2,-ylen],[xlen-L/2,ylen]],coef=1);
+	}
+
+	inctimecurrent=inctime;
+	force1 = pressureforce+viscousforce;
+	incforce = abs(force1 - forceold);
+	resultsout << "time increment/dt: " << inctimecurrent/dt << endl;
+	resultsout << "force increment/dt: " << incforce/dt << endl;
+	resultsout.flush;
+
+	forceout << force1 << endl;
+	forceout.flush;
+
+	// Reset old solution
+	u1old=u1;
+	u2old=u2;
+	rhoold=rho;
+	forceold = force1;
+}
+
+resultsout << "time: " << clock() - cpu << endl;
+resultsout << "timeiter: " << timeiter << endl;
+
+force1 = pressureforce+viscousforce;
+resultsout << "pressure force: " << pressureforce << endl;
+resultsout << "viscous force: " << viscousforce << endl;
+resultsout << "force: " << force1 << endl;
+
+// ####################### BEGIN SECOND SOLUTION LOOP #######################
+
+resultsout << "########### Iteration: 2 ###########" << endl;
+
+Ubackground2=1e-6; // background velocity (m s^-1) starting guess
+resultsout << "Ubackground: " << Ubackground2 << endl;
+
+U=Ubackground2/u0; // non-dimensional background velocity
+resultsout << "U: " << U << endl;
+
+// Set initial conditions
+u1=-U;
+u2=0.;
+u1iter=u1;
+u2iter=u2;
+u1old=u1;
+u2old=u2;
+p=0;
+rho=-y;
+rhoiter=rho;
+rhoold=rho;
+
+// Start time iteration
+timeiter=0;
+inctimecurrent = 2*timetol*dt;
+incforce = 2*forcetol*dt;
+forceold = 0;
+
+while ((inctimecurrent/dt > timetol) || (incforce/dt > forcetol)){
+
+  timeiter++;
+	resultsout << "time iteration: " << timeiter << endl;
+
+	// Start fixed point iteration
+	fixedpointiter = 0;
+	incrhocurrent=2*fixedpointtol;
+	incvelcurrent=2*fixedpointtol;
+
+	while ((incrhocurrent+incvelcurrent>fixedpointtol) && (fixedpointiter<fixedpointitermax)) {
+
+		fixedpointiter++;
+		resultsout << "fixed point iteration: " << fixedpointiter << endl;
+
+		NS;
+		incvelcurrent=incvel;
+		u1=u1*urelax+(1.-urelax)*u1iter;
+		u2=u2*urelax+(1.-urelax)*u2iter;
+		u1iter=u1;
+		u2iter=u2;
+		convdiff;
+		incrhocurrent=incrho;
+		rho = relax*rho+(1.-relax)*rhoiter;
+		rhoiter=rho;
+
+		// Check the convergence progress
+		resultsout << "fixed point increment: " << incrhocurrent+incvelcurrent << endl;
+		resultsout.flush;
+		//if (toPlot) plot(rho);
+		//plot([u1,u2],bb=[[-xlen-L/2,-ylen],[xlen-L/2,ylen]],coef=1);
+	}
+
+	inctimecurrent=inctime;
+	force2 = pressureforce+viscousforce;
+	incforce = abs(force2 - forceold);
+	resultsout << "time increment/dt: " << inctimecurrent/dt << endl;
+	resultsout << "force increment/dt: " << incforce/dt << endl;
+	resultsout.flush;
+
+	forceout << force2 << endl;
+	forceout.flush;
+
+	// Reset old solution
+	u1old=u1;
+	u2old=u2;
+	rhoold=rho;
+	forceold = force2;
+}
+
+resultsout << "time: " << clock() - cpu << endl;
+resultsout << "timeiter: " << timeiter << endl;
+
+force2 = pressureforce+viscousforce;
+resultsout << "pressure force: " << pressureforce << endl;
+resultsout << "viscous force: " << viscousforce << endl;
+resultsout << "force: " << force2 << endl;
+
+// ####################### BEGIN ADDITIONAL SOLUTION LOOPS #######################
+
+veldiffcurrent = 2*veltol;
+while ((veldiffcurrent>veltol) && (abs(force2)>newtontol)){
+	newtoniter++;
+	resultsout << "########### Iteration: "+newtoniter+" ###########" << endl;
+
+	Ubackground3=Ubackground2 - force2/((force2-force1)/(Ubackground2-Ubackground1)); // background velocity (m s^-1)
+	resultsout << "Ubackground: " << Ubackground3 << endl;
+
+	U=Ubackground3/u0; // non-dimensional background velocity
+	resultsout << "U: " << U << endl;
+
+	// Set initial conditions
+	u1=-U;
+	u2=0.;
+	u1iter=u1;
+	u2iter=u2;
+	u1old=u1;
+	u2old=u2;
+	p=0;
+	rho=-y;
+	rhoiter=rho;
+	rhoold=rho;
+
+	// Start time iteration
+	timeiter=0;
+	inctimecurrent = 2*timetol*dt;
+	incforce = 2*forcetol*dt;
+	forceold = 0;
+
+	while ((inctimecurrent/dt > timetol) || (incforce/dt > forcetol)){
+
+	  timeiter++;
+		resultsout << "time iteration: " << timeiter << endl;
+
+		// Start fixed point iteration
+		fixedpointiter = 0;
+		incrhocurrent=2*fixedpointtol;
+		incvelcurrent=2*fixedpointtol;
+
+		while ((incrhocurrent+incvelcurrent>fixedpointtol) && (fixedpointiter<fixedpointitermax)) {
+
+			fixedpointiter++;
+			resultsout << "fixed point iteration: " << fixedpointiter << endl;
+
+			NS;
+			incvelcurrent=incvel;
+			u1=u1*urelax+(1.-urelax)*u1iter;
+			u2=u2*urelax+(1.-urelax)*u2iter;
+			u1iter=u1;
+			u2iter=u2;
+			convdiff;
+			incrhocurrent=incrho;
+			rho = relax*rho+(1.-relax)*rhoiter;
+			rhoiter=rho;
+
+			// Check the convergence progress
+			resultsout << "fixed point increment: " << incrhocurrent+incvelcurrent << endl;
+			resultsout.flush;
+			//if (toPlot) plot(rho);
+			//plot([u1,u2],bb=[[-xlen-L/2,-ylen],[xlen-L/2,ylen]],coef=1);
+		}
+
+		inctimecurrent=inctime;
+		force3 = pressureforce+viscousforce;
+		incforce = abs(force3 - forceold);
+		resultsout << "time increment/dt: " << inctimecurrent/dt << endl;
+		resultsout << "force increment/dt: " << incforce/dt << endl;
+		resultsout.flush;
+
+		forceout << force3 << endl;
+		forceout.flush;
+
+		// Reset old solution
+		u1old=u1;
+		u2old=u2;
+		rhoold=rho;
+		forceold = force3;
+	}
+
+	resultsout << "time: " << clock() - cpu << endl;
+	resultsout << "timeiter: " << timeiter << endl;
+
+	force3 = pressureforce+viscousforce;
+	resultsout << "pressure force: " << pressureforce << endl;
+	resultsout << "viscous force: " << viscousforce << endl;
+	resultsout << "force: " << force3 << endl;
+
+	Ubackground1=Ubackground2;
+	Ubackground2=Ubackground3;
+	veldiffcurrent = abs(Ubackground2-Ubackground1)/Ubackground1;
+
+	force1=force2;
+	force2=force3;
+
+}
+
+// ############### Plotting ###############
+plot([u1,u2],bb=[[-xlen-L/2,-ylen],[xlen-L/2,ylen]],coef=1,ps=dir+"vel.eps");
+plot([u1,u2],bb=[1.2*[-L,-alpha*L],[0.2*L,1.2*alpha*L]],coef=1,value=true,nbarrow=40,ps=dir+"velzoom.eps");
+
+plot(p,nbiso=100,fill=true,ps=dir+"p.eps");
+plot(p,bb=[1.2*[-L,-alpha*L],[0.2*L,1.2*alpha*L]],value=true,nbiso=100,fill=true,ps=dir+"pzoom.eps");
+
+plot(rho,nbiso=100,fill=true,ps=dir+"rho.eps");
+plot(rho,bb=[1.2*[-L,-alpha*L],[0.2*L,1.2*alpha*L]],value=true,nbiso=100,fill=true,ps=dir+"rhozoom.eps");
+
+// ##### LATER #####
+
+// Interpolate into P1 space for graphic representation
+visc1=dx(u1);
+visc2=0.5e0*(dy(u1)+dx(u2));
+p1=p;
+rho1=rho;
+u11=u1;
+u21=u2;
+
+ofstream pout(dir+"p.sol");
+ofstream rhout(dir+"rho.sol");
+ofstream uxout(dir+"ux.sol");
+ofstream uyout(dir+"uy.sol");
+ofstream visc1out(dir+"visc1.sol");
+ofstream visc2out(dir+"visc2.sol");
+
+pout << p1.n << endl;
+rhout << rho1.n << endl;
+uxout << u11.n << endl;
+uyout << u21.n << endl;
+visc1out << visc1.n << endl;
+visc2out << visc2.n << endl;
+
+
+for (i=0;i<rho1.n;i++)
+{
+	 pout << p1[][i] << endl;
+   rhout << rho1[][i] << endl;
+   uxout << u11[][i] << endl;
+   uyout << u21[][i] << endl;
+	 visc1out << visc1[][i] << endl;
+	 visc2out << visc2[][i] << endl;
+};

@@ -1,0 +1,279 @@
+// Navier Stokes
+// Author: Matthew Hurst
+// Based on Codes from Erik Burman
+
+//system("./mytime.sh > timeanddate");
+ifstream filein("timeanddate");
+string datestr;
+filein >> datestr;
+string dir = "Results/"+datestr+"/";
+system("cp main.edp "+dir);
+ofstream setup(dir+"problem_parameters.sol");
+
+// ########## Define some useful functions ##########
+
+macro dn(u) (N.x*dx(u)+N.y*dy(u)) // normal derivative
+macro div(u,v) (dx(u)+dy(v)) // divergence
+macro eps1n(u,v) (dx(u)*N.x+0.5e0*(dy(u)+dx(v))*N.y) //
+macro eps2n(u,v) (dy(v)*N.y+0.5e0*(dy(u)+dx(v))*N.x) //
+
+// ########## Define and initialize variables ##########
+
+// Stabilisation parameters
+real gammap, gammau, gammabc, gdiv;
+gammap=0.1e-1;
+gammau=0.1e-1;
+gammabc=10.0e0;
+gdiv = 0.;
+
+// relaxation parameters
+real relax, urelax;
+relax = 0.1;
+setup << "relax: " << relax << endl;
+urelax = 0.1;
+setup << "urelax: " << urelax << endl;
+
+// Convergence tolerance and increment variables
+real tol = 0.001;
+setup << "tol: " << tol << endl;
+real incrhocurrent, incvelcurrent;
+
+// Counter
+int i;
+int numiter=0;
+int newtoniter=2;
+
+// Problem parameters that don't change
+real g=9.81; // gravitational acceleration (m s^-2)
+setup << "g: " << g << endl;
+real nu = 1.e-6; // kinematic viscosity (m^2 s^-1)
+setup << "nu: " << nu << endl;
+real rho00=1115.0; // dimensional reference density (kg m^-3)
+setup << "rho00: " << rho00 << endl;
+real mu = nu*rho00; // dynamic viscosity (kg m^-1 s^-1)
+setup << "mu: " << mu << endl;
+real kappa0=1.e-6; // dimensional diffusivity constant (m^2 s^-1)
+setup << "kappa0: " << kappa0 << endl;
+real Sc=nu/kappa0; // Schmidt Number
+setup << "Sc: " << Sc << endl;
+
+real Ldim=0.1; // dimensional wedge length (m)
+setup << "Ldim: " << Ldim << endl;
+real L=1.0; // non-dimensional wedge length
+setup << "L: " << L << endl;
+real alpha=0.1; // non-dimensional wedge slope
+setup << "alpha: " << alpha << endl;
+real alpharad = atan(alpha);
+setup << "alpharad: " << alpharad << endl;
+
+real drhodz=-1e-6; // density gradient (kg m^-4)
+setup << "drhodz: " << drhodz << endl;
+real Nvar=(-g*drhodz/rho00)^(0.5); // buoyancy frequency (s^-1)
+setup << "Nvar: " << Nvar << endl;
+real gamma=(Nvar^2*(sin(alpharad))^2/(4.0*nu*kappa0))^(0.25);
+setup << "gamma: " << gamma << endl;
+real u0=2.0*kappa0*gamma/tan(alpharad);// reference velocity (m s^-1)
+setup << "u0: " << u0 << endl;
+real beta0=-Ldim*drhodz/rho00; // non-dimensional stratification parameter
+setup << "beta0: " << beta0 << endl;
+real beta=beta0*rho00*g*Ldim^2/(u0*mu); // scaled stratification parameter
+setup << "beta: " << beta << endl;
+real Re=u0*Ldim/nu; // Reynolds Number
+setup << "Re: " << Re << endl;
+real kappa=1/(Re*Sc); // Non-dimensional diffusivity
+setup << "kappa: " << kappa << endl;
+
+real Ubackground=1e-6; // background velocity (m s^-1) starting guess
+setup << "Ubackground: " << Ubackground << endl;
+real U=Ubackground/u0;
+setup << "U: " << U << endl;
+
+real force;
+
+// Domain setup
+real xlen=15.0, ylen=5.0; // size of domain
+setup << "xlen: " << xlen << endl;
+setup << "ylen: " << ylen << endl;
+real S=99; // label for the wedge border
+
+// Plotting option
+bool toPlot=true;
+
+// ########## Design (and plot) the geometry of the domain ##########
+
+// Outside border
+border C1(t=0,1) {  x=-xlen*(1-t)+xlen*t-L/2; y=-ylen; 							label= 1;}
+border C2(t=0,1) {  x=xlen-L/2;  							y=-ylen*(1-t)+ylen*t; label= 1;}
+border C3(t=0,1) {  x=xlen*(1-t)-xlen*t-L/2;  y=ylen; 							label= 1;}
+border C4(t=0,1) {  x=-xlen-L/2;  						y=ylen*(1-t)-ylen*t;  label= 1;}
+
+// Wedge border
+border Splus(t=L,0){   x = -t; y =  alpha*t ; label=S;}
+border Sminus(t=0,L){  x = -t; y = -alpha*t ; label=S;}
+border Left(t=0,1){ x = -L; y = -alpha*L + t*2*alpha*L ; label = S; }
+
+int topandbottom = 30;
+setup << "topandbottom: " << topandbottom << endl;
+int leftandright = 20;
+setup << "leftandright: " << leftandright << endl;
+int wedgeslope = 70;
+setup << "wedgeslope: " << wedgeslope << endl;
+int wedgeback = 20;
+setup << "wedgeback: " << wedgeback << endl;
+setup.flush;
+
+// Create and save mesh (and plot optionally)
+mesh th= buildmesh(C1(topandbottom)+C2(leftandright)+C3(topandbottom)+C4(leftandright)+Splus(wedgeslope)+Left(wedgeback)+Sminus(wedgeslope));
+savemesh(th,dir+"Th.msh");
+if (toPlot) plot(th,bb=[[-xlen-L/2,-ylen],[xlen-L/2,ylen]],ps=dir+"mesh.eps");
+if (toPlot) plot(th,bb=[1.2*[-L,-alpha*L],[0.2*L,1.2*alpha*L]],ps=dir+"meshzoom.eps");
+
+
+// ########## Define the approximation space and finite element functions ##########
+fespace Vh(th,P2); // p2 space (used for all solution variables)
+Vh u1,u2,p; // velocity and pressure (solution variables)
+Vh v1,v2,q; // test functions in NS
+Vh rho; // density (solution variable)
+Vh v; // test function in convection-diffusion
+Vh b1,b2,rhool; // place-holders for fixed point iteration
+
+
+fespace Xh(th,P1); // p1 polynomial space (only used for plotting)
+Xh p1,u11,u21,rho1;
+Xh visc1,visc2;
+
+// ########## Define some useful functionals ##########
+
+func pressureforce = int1d(th,S)(p*N.x);
+func viscousforce = int1d(th,S)(-eps1n(u1,u2));
+func incrho = sqrt(int2d(th)((rhool-rho)^2)/int2d(th)(rho^2));
+func incvel = sqrt(int2d(th)((u1-b1)^2+(u2-b2)^2)/int2d(th)(u1^2+u2^2));
+
+// ########## Variational form of the convection--diffusion equation ##########
+problem convdiff(rho,v,solver=UMFPACK) =
+	 int2d(th)( kappa*(dx(rho)*dx(v) + dy(rho)*dy(v)) ) // kappafusion
+	+ int2d(th)( b1*dx(rho)*v + b2*dy(rho)*v ) // advection (why not IBP here???)
+//  stabilization necessary if kappa << |b| h$
+//	+ intalledges(th)( ((gammau*abs(b1*N.x + b2*N.y))*lenEdge^(2))*(jump(dn(rho))*jump(dn(v)))*(nTonEdge-1) ) // IP method
+	 + on(1,rho=-y)
+;
+
+
+// ########## Variational form of the Navier-Stokes equations ##########
+problem NS([u1,u2,p],[v1,v2,q],solver=UMFPACK) =
+		int2d(th)(
+						(dx(u1)*dx(v1) + dy(u1)*dy(v1) + dx(u2)*dx(v2) + dy(u2)*dy(v2)) // comes from IBP of Laplacian operator
+			+ Re*(b1*dx(u1) + b2*dy(u1))*v1 // comes directly from conservation of x momentum
+			+ Re*(b1*dx(u2) + b2*dy(u2))*v2 // comes directly from conservation of y momentum
+						 +0.0000000001*p*q      // this small penalty term improves solvability (why?????)
+			+gdiv*div(b1,b2)*(u1*v1+u2*v2) // this term is turned off right now - what would it be otherwise???
+						- p*div(v1,v2) // comes from IBP of pressure term in conservation of momentum
+						+ q*(div(u1,u2)) // comes directly from the incompressibility equation
+					 )
+		 + int2d(th)(rho*beta*v2) // comes from buoyancy term
+// Interior penalty stabilization of the streamline derivative + 5% crosswind diffusion
+//  + intalledges(th)(
+//    (gammau*(abs(b1*N.x + b2*N.y)+
+//             0.05*(b1^2 + b2^2)^0.5))*lenEdge^(2)*
+//        (jump(dn(u1))*jump(dn(v1))+jump(dn(u2))*jump(dn(v2))*(nTonEdge-1)))
+	+ intalledges(th)( (gammap*min(lenEdge^(3)/nu,lenEdge^(2)/(1.e-16+(b1^2+b2^2)^0.5)))
+		 *(jump(dn(p))*jump(dn(q)))*(nTonEdge-1))   // this penalty on gradient fluctuations ensures pressure stability
+// Strongly imposed boundary conditions
+							+ on(S,u1=0,u2=0)
+							+ on(1,u1=-U,u2=0)
+;
+
+// #################### MAIN PROGRAM ####################
+
+ofstream resultsout(dir+"results.sol");
+
+// Initialize variables
+u1=-U; // guess uniform flow in x direction
+u2=0.;
+b1=u1;
+b2=u2;
+rho=0; // guess for density
+rhool=rho;
+incrhocurrent=2*tol;
+incvelcurrent=2*tol;
+
+real cpu = clock();
+
+// Start fixed point iteration
+while (incrhocurrent+incvelcurrent>tol){
+	numiter++;
+	cout << numiter << endl;
+	NS;
+	incvelcurrent=incvel;
+	u1=u1*urelax+(1.-urelax)*b1;
+	u2=u2*urelax+(1.-urelax)*b2;
+	b1=u1;
+	b2=u2;
+	convdiff;
+	incrhocurrent=incrho;
+	rho = relax*rho+(1.-relax)*rhool;
+	rhool=rho;
+	// Check the convergence progress
+	cout << "increment: " << incrhocurrent+incvelcurrent << endl;
+	resultsout << "increment: " << incrhocurrent+incvelcurrent << endl;
+	resultsout.flush;
+	//if (toPlot) plot(rho);
+}
+cout << "CONVERGED!!!" << endl;
+
+resultsout << "time: " << clock() - cpu << endl;
+resultsout << "numiter: " << numiter << endl;
+
+force = pressureforce+viscousforce;
+resultsout << "pressure force: " << pressureforce << endl;
+resultsout << "viscous force: " << viscousforce << endl;
+cout << "force: " << force << endl;
+resultsout << "force: " << force << endl;
+
+
+// ############### Plotting ###############
+plot([u1,u2],bb=[[-xlen-L/2,-ylen],[xlen-L/2,ylen]],coef=1,ps=dir+"vel.eps");
+plot([u1,u2],bb=[1.2*[-L,-alpha*L],[0.2*L,1.2*alpha*L]],coef=1,value=true,nbarrow=40,ps=dir+"velzoom.eps");
+
+plot(p,nbiso=100,fill=true,ps=dir+"p.eps");
+//plot(p,bb=[1.2*[-L,-alpha*L],[0.2*L,1.2*alpha*L]],value=true,nbiso=100,fill=true,ps=dir+"pzoom.eps");
+
+plot(rho,nbiso=100,fill=true,ps=dir+"rho.eps");
+//plot(bb=[1.2*[-L,-alpha*L],rho,[0.2*L,1.2*alpha*L]],value=true,nbiso=100,fill=true,ps=dir+"rhozoom.eps");
+
+
+// ##### LATER #####
+
+// Interpolate into P1 space for graphic representation
+visc1=dx(u1);
+visc2=0.5e0*(dy(u1)+dx(u2));
+p1=p;
+rho1=rho;
+u11=u1;
+u21=u2;
+
+//
+ofstream pout(dir+"p.sol");
+ofstream rhout(dir+"rho.sol");
+ofstream uxout(dir+"ux.sol");
+ofstream uyout(dir+"uy.sol");
+ofstream visc1out(dir+"visc1.sol");
+ofstream visc2out(dir+"visc2.sol");
+
+pout << p1.n << endl;
+rhout << rho1.n << endl;
+uxout << u11.n << endl;
+uyout << u21.n << endl;
+visc1out << visc1.n << endl;
+visc2out << visc2.n << endl;
+
+//
+for (i=0;i<rho1.n;i++)
+{
+	 pout << p1[][i] << endl;
+   rhout << rho1[][i] << endl;
+   uxout << u11[][i] << endl;
+   uyout << u21[][i] << endl;
+	 visc1out << visc1[][i] << endl;
+	 visc2out << visc2[][i] << endl;
+};

@@ -1,0 +1,149 @@
+\usepackage[a4paper, left=30mm, right=30mm, top=20mm, bottom=20mm]{geometry}
+
+\usepackage{graphicx}
+\usepackage[export]{adjustbox}
+\usepackage{epstopdf}
+\usepackage{eso-pic}
+%\usepackage{cite}
+\usepackage{verbatim}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+%\graphicspath{{./Graphics/}}
+\usepackage{gensymb}
+\usepackage{url}
+\usepackage[style=nature]{biblatex}
+\addbibresource{references.bib}
+%\bibliography{references.bib}
+
+\usepackage{lmodern}  % for bold teletype font
+\usepackage{amsmath}  % for \hookrightarrow
+\usepackage{xcolor}   % for \textcolor
+
+\usepackage{listings}
+\lstset {
+	basicstyle=\footnotesize,
+	columns=fullflexible,
+	%frame=single,
+	breaklines=true,
+	postbreak=\mbox{\textcolor{red}{$\hookrightarrow$}\space},
+}
+
+\usepackage{setspace}
+\linespread{1.5}
+
+\newcommand\BackgroundPic{
+\put(0,0){
+\parbox[b][\paperheight]{\paperwidth}{%
+\vfill
+\centering
+\includegraphics[width=\paperwidth,height=\paperheight,
+keepaspectratio]{00_headerpic.pdf}%
+\vfill
+}}}
+
+\usepackage{fancyhdr}
+
+% Equation Formatting
+\RequirePackage{suffix}
+\newcommand{\neweq}[2]{
+	\begin{equation}
+	\label{e:#1}
+	#2
+	\end{equation}
+}
+
+\WithSuffix\newcommand\neweq*[1]{
+	$$
+	#1
+	$$
+}
+
+\newcommand{\eq}[1]{(\ref{#1})}
+\newcommand{\eqs}[2]{Eqs. \ref{e:#1} \& \ref{e:#2}}
+\newcommand{\Eq}[1]{Equation \ref{e:#1}}
+
+% Pretty Fractions
+\RequirePackage{amsfonts}
+\RequirePackage{amsmath}
+\numberwithin{equation}{section}
+
+% Images
+\RequirePackage{graphicx}
+\RequirePackage{wrapfig}
+\RequirePackage{float}
+\setkeys{Gin}{ width=\linewidth, totalheight=\textheight, keepaspectratio }
+
+% Text wrapped figures
+\newcommand{\rightfig}[3]{
+	\begin{wrapfigure}{R}{.45\textwidth}
+		\includegraphics[width=.4\textwidth]{#1}
+		\caption{#3}
+		\label{f:#2}
+	\end{wrapfigure}
+}
+\newcommand{\leftfig}[3]{
+	\begin{wrapfigure}{L}{.45\textwidth}
+		\includegraphics[width=.4\textwidth]{#1}
+		\caption{#3}
+		\label{f:#2}
+	\end{wrapfigure}
+}
+\newcommand{\sidebyside}[6]{
+	\begin{figure}[H]
+		\begin{minipage}[b]{0.45\linewidth}
+			\centering
+			\includegraphics[width=\textwidth]{#1}
+			\caption{#3}
+			\label{f:#2}
+		\end{minipage}
+		\hspace{0.05\linewidth}
+		\begin{minipage}[b]{0.45\linewidth}
+			\centering
+			\includegraphics[width=\textwidth]{#4}
+			\caption{#6}
+			\label{f:#5}
+		\end{minipage}
+	\end{figure}
+}
+\newcommand{\centerfig}[4]{
+	\begin{figure}[H]
+		{\centering
+			\includegraphics[width=#4\textwidth]{#1}
+			\caption{#3}
+			\label{#2}
+		}
+	\end{figure}
+}
+\newcommand{\centertrim}[4]{
+\begin{figure}[H]
+	{\centering
+		\adjincludegraphics[width=#4\textwidth,trim={{.14\width} {.32\height} {.14\width} {.32\height}},clip]{#1}
+		\caption{#3}
+		\label{#2}
+	}
+\end{figure}
+}
+
+\newcommand{\centertrimnew}[4]{
+	\begin{figure}[H]
+		{\centering
+			\adjincludegraphics[width=#4\textwidth,trim={{.15\width} {.2\height} {.15\width} {.23\height}},clip]{#1}
+			\caption{#3}
+			\label{#2}
+		}
+	\end{figure}
+}
+
+\newcommand{\centertrimnewer}[4]{
+	\begin{figure}[H]
+		{\centering
+			\adjincludegraphics[width=#4\textwidth,trim={{0\width} {.25\height} {0\width} {.25\height}},clip]{#1}
+			\caption{#3}
+			\label{#2}
+		}
+	\end{figure}
+}
+
+\newcommand{\fig}[1]{Fig. \ref{#1}}
+\newcommand{\Figure}[1]{Figure \ref{f:#1}}
+\newcommand{\figs}[2]{Figs. \ref{f:#1} \& \ref{f:#2}}

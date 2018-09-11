@@ -1,0 +1,13 @@
+Viscous forces:
+Top: -1.780416
+Bottom: -1.793394
+Back: -0.009441
+Total: -3.583251
+
+Pressure forces:
+Top: 275.125195
+Bottom: 275.128271
+Back: -546.628745
+Total: 3.624722
+
+Net force: 0.041471

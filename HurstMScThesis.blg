@@ -1,0 +1,28 @@
+[0] Config.pm:354> INFO - This is Biber 2.7
+[0] Config.pm:357> INFO - Logfile is 'HurstMScThesis.blg'
+[37] biber-darwin:303> INFO - === Tue Sep 11, 2018, 11:25:38
+[56] Biber.pm:359> INFO - Reading 'HurstMScThesis.bcf'
+[140] Biber.pm:835> INFO - Found 25 citekeys in bib section 0
+[152] Biber.pm:3670> INFO - Processing section 0
+[166] Biber.pm:3840> INFO - Looking for bibtex format file 'references.bib' for section 0
+[172] bibtex.pm:1435> INFO - Decoding LaTeX character macros into UTF-8
+[179] bibtex.pm:1292> INFO - Found BibTeX data source 'references.bib'
+[184] Utils.pm:164> WARN - Duplicate entry key: 'KIM2016225' in file 'references.bib', skipping ...
+[200] Utils.pm:164> WARN - month field 'May' in entry 'Dimitrieva2018' is not an integer - this will probably not sort properly.
+[204] Utils.pm:164> WARN - month field 'March' in entry 'writeup' is not an integer - this will probably not sort properly.
+[206] Utils.pm:164> WARN - month field 'September' in entry 'email' is not an integer - this will probably not sort properly.
+[226] Utils.pm:164> WARN - ISBN '0036-1429' in entry 'BurmanOseen' is invalid - run biber with '--validate_datamodel' for details.
+[226] Utils.pm:164> WARN - month field 'July' in entry 'BurmanOseen' is not an integer - this will probably not sort properly.
+[228] Utils.pm:164> WARN - month field 'Jul' in entry 'Burman2007' is not an integer - this will probably not sort properly.
+[236] Utils.pm:164> WARN - BibTeX subsystem: /var/folders/01/zppqhgkx36d0f56c8kzxfmbm0000gn/T/VUjfyLeOHS/references.bib_17019.utf8, line 77, warning: 10 characters of junk seen at toplevel
+[254] UCollate.pm:68> INFO - Overriding locale 'en-US' defaults 'normalization = NFD' with 'normalization = prenormalized'
+[254] UCollate.pm:68> INFO - Overriding locale 'en-US' defaults 'variable = shifted' with 'variable = non-ignorable'
+[254] Biber.pm:3499> INFO - Sorting list 'none/global/' of type 'entry' with scheme 'none' and locale 'en-US'
+[254] Biber.pm:3505> INFO - No sort tailoring available for locale 'en-US'
+[270] bbl.pm:608> INFO - Writing 'HurstMScThesis.bbl' with encoding 'ascii'
+[276] Utils.pm:164> WARN - The entry 'BurmanOseen' has characters which cannot be encoded in 'ascii'. Recoding problematic characters into macros.
+[277] Utils.pm:164> WARN - The entry 'Burman2007' has characters which cannot be encoded in 'ascii'. Recoding problematic characters into macros.
+[278] Utils.pm:164> WARN - The entry 'KIM2016225' has characters which cannot be encoded in 'ascii'. Recoding problematic characters into macros.
+[279] Utils.pm:164> WARN - The entry 'hecht2018freefem++' has characters which cannot be encoded in 'ascii'. Recoding problematic characters into macros.
+[280] bbl.pm:712> INFO - Output to HurstMScThesis.bbl
+[280] Biber.pm:109> INFO - WARNINGS: 12

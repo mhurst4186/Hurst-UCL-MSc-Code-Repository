@@ -1,0 +1,12 @@
+#!/bin/bash
+
+currenttime=$(date '+%Y-%m-%d-%H:%M:%S')
+echo $currenttime > timeanddate
+mkdir Results/$currenttime
+
+cd ../matlabplotter
+
+/Applications/MATLAB_R2017a.app/bin/matlab -nodesktop -nosplash -r 'plotsurface($currenttime)'
+
+FreeFem++ -fglut Results/$currenttime/window main.edp
+

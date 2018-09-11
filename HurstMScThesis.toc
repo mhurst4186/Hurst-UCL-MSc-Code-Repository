@@ -1,0 +1,115 @@
+\boolfalse {citerequest}\boolfalse {citetracker}\boolfalse {pagetracker}\boolfalse {backtracker}\relax 
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {1}Introduction}{6}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{\numberline {1.1}Theoretical Background of Diffusion-Driven Flow}{7}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{\numberline {1.2}Flow Around Wedge-Shaped Objects}{9}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {2}Problem Definition}{13}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{\numberline {2.1}Geometric Setup}{13}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{\numberline {2.2}Stationary Case}{15}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsubsection}{\numberline {2.2.1}Conservation of Momentum}{16}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsubsection}{\numberline {2.2.2}Conservation of Mass}{17}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsubsection}{\numberline {2.2.3}Boundary Conditions}{17}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{\numberline {2.3}Time-Dependent Case}{18}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsubsection}{\numberline {2.3.1}Conservation of Momentum}{19}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsubsection}{\numberline {2.3.2}Conservation of Mass}{19}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsubsection}{\numberline {2.3.3}Initial and Boundary Conditions}{20}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{\numberline {2.4}Non-dimensionalization}{20}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsubsection}{\numberline {2.4.1}Non-dimensional Variables}{20}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsubsection}{\numberline {2.4.2}Stationary Case}{22}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsubsection}{\numberline {2.4.3}Time-Dependent Case}{23}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsubsection}{\numberline {2.4.4}Initial and Boundary Conditions}{24}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsubsection}{\numberline {2.4.5}Discussion}{24}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{\numberline {2.5}Non-Diffusive Limit}{25}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {3}Numerical Implementation}{26}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{\numberline {3.1}Weak Formulation}{26}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsubsection}{\numberline {3.1.1}Stationary Case}{26}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsubsection}{\numberline {3.1.2}Time-Dependent Case}{28}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsubsection}{\numberline {3.1.3}Non-Diffusive Limit}{28}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{\numberline {3.2}Finite Element Method}{29}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsubsection}{\numberline {3.2.1}Mesh Discretization}{30}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsubsection}{\numberline {3.2.2}Interpolation, Galerkin Projection, Integration, and Solving}{31}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{\numberline {3.3}Non-Diffusive Case Pressure Recovery}{31}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{\numberline {3.4}Computing Forces}{32}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{\numberline {3.5}Fixed Point Iteration}{33}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{\numberline {3.6}Time Stepping}{34}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{\numberline {3.7}Zero Finding}{36}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {4}Numerical Results: Steady Case}{37}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{\numberline {4.1}Negative Net Force}{37}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{\numberline {4.2}Zero Net Force}{38}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{\numberline {4.3}Positive Net Force}{40}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{\numberline {4.4}High Stratification}{40}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {5}Numerical Results: Time-Dependent Case}{42}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{\numberline {5.1}Mesh Refinement Study}{42}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{\numberline {5.2}Domain Size Study}{43}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{\numberline {5.3}Experimental Case}{44}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{\numberline {5.4}Stratification Study}{50}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsubsection}{\numberline {5.4.1}Schmidt Number = 1}{50}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsubsection}{\numberline {5.4.2}Schmidt Number = 100}{51}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsubsection}{\numberline {5.4.3}Schmidt Number = 1000}{51}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsubsection}{\numberline {5.4.4}Discussion}{52}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{\numberline {5.5}Wedge Slope Study}{53}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{\numberline {5.6}Schmidt Number Study}{54}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsubsection}{\numberline {5.6.1}Low Stratification}{54}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsubsection}{\numberline {5.6.2}High Stratification}{55}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{\numberline {5.7}Discussion}{57}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {6}Numerical Results: Non-Diffusive Limit}{58}
+\defcounter {refsection}{0}\relax 
+\contentsline {section}{\numberline {7}Conclusion}{60}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{\numberline {7.1}Summary of Research Conducted}{60}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{\numberline {7.2}Strengths and Weaknesses}{60}
+\defcounter {refsection}{0}\relax 
+\contentsline {subsection}{\numberline {7.3}Ideas for Future Work}{61}
